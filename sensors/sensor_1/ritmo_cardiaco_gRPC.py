@@ -22,7 +22,7 @@ def run():
         )
 
         ack = stub.SendHeartRate(hr_data)
-        print(f"Enviado: {hr_data.heart_rate} {hr_data.unit} | Respuesta: {ack.message}", flush=True)
+        print(f"[Sensor] Enviado: {hr_data.heart_rate} {hr_data.unit} | Respuesta: {ack.message}", flush=True)
         time.sleep(5)
 
 if __name__ == "__main__":

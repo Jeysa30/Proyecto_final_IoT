@@ -2,14 +2,15 @@ syntax = "proto3";
 
 package sensor;
 
-service TemperatureSensor {
-  rpc SendTemperature (TemperatureData) returns (Acknowledgement);
+service HeartRateSensor {
+  rpc SendHeartRate (HeartRateData) returns (Acknowledgement);
 }
 
-message TemperatureData {
+message HeartRateData {
   string sensor_id = 1;
-  float temperature = 2;
-  string timestamp = 3;
+  int32 heart_rate = 2;
+  string unit = 3;
+  string timestamp = 4;
 }
 
 message Acknowledgement {

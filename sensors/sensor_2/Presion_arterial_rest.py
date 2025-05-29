@@ -28,8 +28,7 @@ def send_to_gateway():
     while True:
         try:
             data = generate_blood_pressure()
-            response = requests.post(f"{GATEWAY_URL}/blood-pressure", json=data)
-            print(f"Datos enviados al gateway. Respuesta: {response.status_code}", flush=True)
+            print(f"[Sensor] Enviado: {data}", flush=True)
         except Exception as e:
             print(f"Error al enviar datos al gateway: {e}")
 
