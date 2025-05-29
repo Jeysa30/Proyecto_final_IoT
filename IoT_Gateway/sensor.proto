@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package sensor;
+
+service TemperatureSensor {
+  rpc SendTemperature (TemperatureData) returns (Acknowledgement);
+}
+
+message TemperatureData {
+  string sensor_id = 1;
+  float temperature = 2;
+  string timestamp = 3;
+}
+
+message Acknowledgement {
+  string message = 1;
+}

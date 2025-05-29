@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package sensor;
+
+service HeartRateSensor {
+  rpc SendHeartRate (HeartRateData) returns (Acknowledgement);
+}
+
+message HeartRateData {
+  string sensor_id = 1;
+  int32 heart_rate = 2;
+  string unit = 3;
+  string timestamp = 4;
+}
+
+message Acknowledgement {
+  string message = 1;
+}

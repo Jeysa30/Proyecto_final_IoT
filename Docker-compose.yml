@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+
+  iot-gateway:
+    build:
+      context: ./IoT_gateway
+    container_name: iot-gateway
+    ports:
+      - "50051:50051" #gRPC
+      - "5000:5000"   #REST
+      - "8766:8765"   #WebSocket
+    restart: always
+    networks:
+      - iot_net
+
+  sensor-grpc:
+    build:
+      context: ./sensors/sensor_1
+    container_name: sensor-grpc
+    depends_on:
+      - iot-gateway
+    environment:
+      - GATEWAY_HOST=iot-gateway
+    restart: always
+    networks:
+      - iot_net
+
+  sensor-rest:
+    build:
+      context: ./sensors/sensor_2
+    container_name: sensor-rest
+    depends_on:
+      - iot-gateway
+    environment:
+      - GATEWAY_HOST=iot-gateway
+    restart: always
+    networks:
+      - iot_net
+
+  sensor-websocket:
+    build:
+      context: ./sensors/sensor_3
+    container_name: sensor-websocket
+
+    restart: always
+    networks:
+      - iot_net
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=iot_user
+      - POSTGRES_PASSWORD=iot_password
+      - POSTGRES_DB=health_data
+    volumes:
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - iot_net
+
+networks:
+  iot_net:
+    driver: bridge
