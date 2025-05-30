@@ -28,12 +28,13 @@ def send_to_gateway():
     while True:
         try:
             data = generate_blood_pressure()
-            print(f"[Sensor] Enviado: {data}", flush=True)
+            response = requests.post(f"{GATEWAY_URL}/blood-pressure", json=data)
+            print(f"[Sensor] Enviado: {response.status_code} | {data}", flush=True)
+
         except Exception as e:
             print(f"Error al enviar datos al gateway: {e}")
 
-        
-        time.sleep(10)  # Enviar cada 30 segundos
+        time.sleep(4)
 
 @app.route('/health', methods=['GET'])
 def health_check():
