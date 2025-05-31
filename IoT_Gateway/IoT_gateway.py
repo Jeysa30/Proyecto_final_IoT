@@ -55,8 +55,7 @@ def on_connection_closed(connection, callback_data):
     print("Connection closed")
 
 ### --- MQTT: Publicar --- ###
-def MQTT_publish(sensor_type, data):
-    topic = "data/rpm/paciente_id/sensor"
+def MQTT_publish(sensor_type, data, topic):
     message = {
     "sensor_type": sensor_type,
     "data": data,
@@ -92,9 +91,8 @@ class HeartRateSensorServicer(sensor_pb2_grpc.HeartRateSensorServicer):
             "sensor_id": request.sensor_id,
             "heart_rate": request.heart_rate,
             "unit": request.unit,
-            #"timestamp": request.timestamp
         })
-        MQTT_publish("heart_rate", request.heart_rate)
+        MQTT_publish("heart_rate", request.heart_rate, "rpm/casa/piso_1/habitacion_2/heart_rate/sensor_1")
         return sensor_pb2.Acknowledgement(message="Ritmo cardíaco recibido correctamente.")
 
 def serve_grpc():
@@ -113,7 +111,7 @@ def handle_blood_pressure():
     data = request.json
     print(f"[REST] Presión arterial recibida: {data}", flush=True)
     sensor_data["blood_pressure"].append(data)
-    MQTT_publish("blood_pressure", data)
+    MQTT_publish("blood_pressure", data, "rpm/hospital/piso_2/habitacion_23/blood_pressure/sensor_2")
     return jsonify({"status": "success", "message": "Presión arterial recibida"})
 
 @rest_app.route('/health', methods=['GET'])
@@ -130,7 +128,7 @@ async def websocket_server(websocket):
         data = json.loads(message)
         print(f"[WebSocket] Recibido: Sensor {data['sensor_id']}, Nivel de glucosa recibido: {data}", flush=True)
         sensor_data["glucose_level"].append(data['value'])
-        MQTT_publish("glucose_level", data['value'])
+        MQTT_publish("glucose_level", data['value'], "rpm/hospital/piso_2/habitacion_20/glucose_level/sensor_3")
 
 def serve_websocket():
     loop = asyncio.new_event_loop()

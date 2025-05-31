@@ -34,7 +34,7 @@ fi
 # run pub/sub sample app using certificates downloaded in package
 printf "\nRunning pub/sub sample application...\n"
 cp -r aws-iot-device-sdk-python-v2/samples/utils utils
-python3 IoT_gateway.py --endpoint a2xfw28ro914ci-ats.iot.us-east-1.amazonaws.com --ca_file root-CA.crt --cert Gateway_IoT_Salud.cert.pem --key Gateway_IoT_Salud.private.key --client_id basicPub --topic data/rpm/paciente_id/sensor --count 0
+python3 IoT_gateway.py --endpoint a2xfw28ro914ci-ats.iot.us-east-1.amazonaws.com --ca_file root-CA.crt --cert Gateway_IoT_Salud.cert.pem --key Gateway_IoT_Salud.private.key --client_id basicPub --topic rpm/ --count 0
 
 
 # ping a2xfw28ro914ci-ats.iot.us-east-1.amazonaws.com
