@@ -57,9 +57,8 @@ def on_connection_closed(connection, callback_data):
 ### --- MQTT: Publicar --- ###
 def MQTT_publish(sensor_type, data, topic):
     message = {
-    "sensor_type": sensor_type,
-    "data": data,
-    "timestamp": datetime.datetime.now().isoformat()
+        "sensor_type": sensor_type,
+        "data": data
     }
 
     message_json = json.dumps(message)
@@ -128,7 +127,7 @@ async def websocket_server(websocket):
         data = json.loads(message)
         print(f"[WebSocket] Recibido: Sensor {data['sensor_id']}, Nivel de glucosa recibido: {data}", flush=True)
         sensor_data["glucose_level"].append(data['value'])
-        MQTT_publish("glucose_level", data['value'], "rpm/hospital/piso_2/habitacion_20/glucose_level/sensor_3")
+        MQTT_publish("glucose_level", data, "rpm/hospital/piso_2/habitacion_20/glucose_level/sensor_3")
 
 def serve_websocket():
     loop = asyncio.new_event_loop()

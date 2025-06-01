@@ -29,7 +29,7 @@ async def send_glucose_level():
                     data = await generate_glucose_data(sensor_id)
                     await websocket.send(data)
                     print(f"[Sensor] Enviado: {data}", flush=True)
-                    await asyncio.sleep(2)
+                    await asyncio.sleep(4)
         except (ConnectionRefusedError, websockets.exceptions.InvalidURI,
                 websockets.exceptions.InvalidHandshake,
                 websockets.exceptions.ConnectionClosedError,

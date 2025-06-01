@@ -1,5 +1,6 @@
 import random
 import time
+from datetime import datetime
 import requests
 from flask import Flask, jsonify
 import threading
@@ -16,12 +17,12 @@ def generate_blood_pressure():
     """Genera datos simulados de presión arterial"""
     systolic = random.randint(90, 140)  # Presión sistólica (mmHg)
     diastolic = random.randint(60, 90)  # Presión diastólica (mmHg)
-    heart_rate = random.randint(60, 100)  # Frecuencia cardíaca (bpm)
     return {
+        "sensor_id": SENSOR_ID,
         "systolic": systolic,
         "diastolic": diastolic,
-        "heart_rate": heart_rate,
-        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+        "unit": "mmHg",
+        "timestamp": datetime.utcnow().isoformat()
     }
 
 def wait_for_gateway():
