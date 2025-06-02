@@ -7,7 +7,7 @@ import sensor_pb2
 import sensor_pb2_grpc
 
 def generate_heart_rate():
-    return random.randint(60, 100)  # Rango típico
+    return random.randint(40, 120)  # Rango típico
 
 def wait_for_gateway(channel, stub):
     print("[Sensor] Esperando a que el IoT Gateway esté disponible...", flush=True)

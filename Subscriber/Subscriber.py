@@ -1,19 +1,15 @@
-from concurrent import futures
-import grpc
-import sensor_pb2
-import sensor_pb2_grpc
-from flask import Flask, request, jsonify
-import threading
-import asyncio
-import websockets
-import json
-import sys
-
 from awscrt import mqtt, http
 from awsiot import mqtt_connection_builder
+import sys
+import threading
+import psycopg2
+import json
 from utils.command_line_utils import CommandLineUtils
 
 cmdData = CommandLineUtils.parse_sample_input_pubsub()
+
+received_count = 0
+received_all_event = threading.Event()
 
 # Callback when connection is accidentally lost.
 def on_connection_interrupted(connection, error, **kwargs):
@@ -53,92 +49,45 @@ def on_connection_failure(connection, callback_data):
 def on_connection_closed(connection, callback_data):
     print("Connection closed")
 
-### --- MQTT: Publicar --- ###
-def MQTT_publish(sensor_type, data, topic):
-    message = {
-        "sensor_type": sensor_type,
-        "data": data
-    }
-
-    message_json = json.dumps(message)
-    print(f"[MQTT] Publicando mensaje a tópico '{topic}': {message_json}")
+# Callback when the subscribed topic receives a message
+def on_message_received(topic, payload, dup, qos, retain, **kwargs):
+    global received_count
+    print("Received message from topic '{}': {}".format(topic, payload))
 
     try:
-        mqtt_connection.publish(
-            topic=topic,
-            payload=message_json,
-            qos=mqtt.QoS.AT_LEAST_ONCE
+        data = json.loads(payload.decode())
+
+        # JSON tiene sensor_id, valor, timestamp
+        sensor_type = data.get("sensor_type")
+        sensor_info = data.get("data", {})
+        sensor_id = sensor_info.get("sensor_id")
+        unit = sensor_info.get("unit")
+        timestamp = sensor_info.get("timestamp")
+
+        if sensor_type == "heart_rate":
+            value = sensor_info.get("heart_rate")
+        elif sensor_type == "glucose_level":
+            value = sensor_info.get("value")
+        elif sensor_type == "blood_pressure":
+            systolic = sensor_info.get("systolic")
+            diastolic = sensor_info.get("diastolic")
+            value = f"systolic: {systolic}/diastolic: {diastolic}" 
+
+        # Inserta en la base de datos
+        cursor.execute(
+            "INSERT INTO sensores (id_sensor, tipo_sensor, valor,unidad, timestamp) VALUES (%s, %s, %s, %s, %s)",
+            (sensor_id, sensor_type, value, unit, timestamp)
         )
-        print("[MQTT] Mensaje publicado correctamente")
+        conn.commit()
+        print("Datos insertados en la base de datos.")
 
     except Exception as e:
-        print(f"[ERROR] Falló publicación MQTT: {e}", flush=True)
+        conn.rollback()
+        print("[ERROR] al procesar mensaje o insertar en DB:", e)
 
-### --- Almacenamiento Temporal de Datos --- ###
-sensor_data = {
-    "heart_rate": [],
-    "blood_pressure": [],
-    "glucose_level": []
-}
-
-### --- GRPC: Ritmo Cardiaco --- ###
-class HeartRateSensorServicer(sensor_pb2_grpc.HeartRateSensorServicer):
-    def SendHeartRate(self, request, context):
-        print(f"[gRPC] Ritmo cardíaco recibido: {request.heart_rate} {request.unit} de {request.sensor_id} a las {request.timestamp}", flush=True)
-        sensor_data["heart_rate"].append({
-            "sensor_id": request.sensor_id,
-            "heart_rate": request.heart_rate,
-            "unit": request.unit,
-        })
-        MQTT_publish("heart_rate", request.heart_rate, "rpm/casa/piso_1/habitacion_2/heart_rate/sensor_1")
-        return sensor_pb2.Acknowledgement(message="Ritmo cardíaco recibido correctamente.")
-
-def serve_grpc():
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    sensor_pb2_grpc.add_HeartRateSensorServicer_to_server(HeartRateSensorServicer(), server)
-    server.add_insecure_port('[::]:50051')
-    print("[gRPC] Servidor iniciado en puerto 50051...", flush=True)
-    server.start()
-    server.wait_for_termination()
-
-### --- REST: Presión Arterial --- ###
-rest_app = Flask(__name__)
-
-@rest_app.route('/blood-pressure', methods=['POST'])
-def handle_blood_pressure():
-    data = request.json
-    print(f"[REST] Presión arterial recibida: {data}", flush=True)
-    sensor_data["blood_pressure"].append(data)
-    MQTT_publish("blood_pressure", data, "rpm/hospital/piso_2/habitacion_23/blood_pressure/sensor_2")
-    return jsonify({"status": "success", "message": "Presión arterial recibida"})
-
-@rest_app.route('/health', methods=['GET'])
-def health_check():
-    return jsonify({"status": "healthy"})
-
-def serve_rest():
-    print("[REST] Servidor REST iniciado en puerto 5000")
-    rest_app.run(host='0.0.0.0', port=5000)
-
-### --- WebSocket: Nivel de Glucosa --- ###
-async def websocket_server(websocket):
-    async for message in websocket:
-        data = json.loads(message)
-        print(f"[WebSocket] Recibido: Sensor {data['sensor_id']}, Nivel de glucosa recibido: {data}", flush=True)
-        sensor_data["glucose_level"].append(data['value'])
-        MQTT_publish("glucose_level", data, "rpm/hospital/piso_2/habitacion_20/glucose_level/sensor_3")
-
-def serve_websocket():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-    async def start_server():
-        print("[WebSocket] Servidor iniciado en puerto 8765")
-        async with websockets.serve(websocket_server, "0.0.0.0", 8765):
-            await asyncio.Future()
-
-    loop.run_until_complete(start_server())
-    loop.run_forever()
+    received_count += 1
+    if received_count == cmdData.input_count:
+        received_all_event.set()
 
 ### --- Inicio de servidores --- ###
 if __name__ == '__main__':
@@ -165,7 +114,7 @@ if __name__ == '__main__':
         on_connection_success=on_connection_success,
         on_connection_failure=on_connection_failure,
         on_connection_closed=on_connection_closed)
-    
+
     if not cmdData.input_is_ci:
         print(f"Connecting to {cmdData.input_endpoint} with client ID '{cmdData.input_clientId}'...")
     else:
@@ -176,17 +125,29 @@ if __name__ == '__main__':
     connect_future.result()
     print("Connected!")
 
-    grpc_thread = threading.Thread(target=serve_grpc, daemon=True)
-    rest_thread = threading.Thread(target=serve_rest, daemon=True)
-    websocket_thread = threading.Thread(target=serve_websocket, daemon=True)
+    # Guardar en la base de datos
+    conn = psycopg2.connect(
+        host="172.31.31.96",
+        port="5432",
+        database="midb",
+        user="postgres",
+        password="basedatos"
+    )
+    cursor = conn.cursor()
 
-    grpc_thread.start()
-    rest_thread.start()
-    websocket_thread.start()
+    # Suscripción al tópico MQTT
+    topic = "rpm/hospital/piso_2/#"
+    print("Subscribing to topic '{}'...".format(topic))
+    subscribe_future, packet_id = mqtt_connection.subscribe(
+        topic=topic,
+        qos=mqtt.QoS.AT_LEAST_ONCE,
+        callback=on_message_received)
 
-    grpc_thread.join()
-    rest_thread.join()
-    websocket_thread.join()
+    subscribe_result = subscribe_future.result()
+    print("Subscribed with {}".format(str(subscribe_result['qos'])))
+
+    received_all_event.wait()
+    print("{} message(s) received.".format(received_count))
 
     # Disconnect
     print("Disconnecting...")

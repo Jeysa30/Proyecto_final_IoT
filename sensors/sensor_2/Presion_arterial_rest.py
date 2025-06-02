@@ -15,8 +15,8 @@ app = Flask(__name__)
 
 def generate_blood_pressure():
     """Genera datos simulados de presión arterial"""
-    systolic = random.randint(90, 140)  # Presión sistólica (mmHg)
-    diastolic = random.randint(60, 90)  # Presión diastólica (mmHg)
+    systolic = random.randint(115, 140)  # Presión sistólica (mmHg) 90
+    diastolic = random.randint(79, 90)  # Presión diastólica (mmHg) 60
     return {
         "sensor_id": SENSOR_ID,
         "systolic": systolic,
