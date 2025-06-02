@@ -74,22 +74,10 @@ def MQTT_publish(sensor_type, data, topic):
     except Exception as e:
         print(f"[ERROR] Falló publicación MQTT: {e}", flush=True)
 
-### --- Almacenamiento Temporal de Datos --- ###
-sensor_data = {
-    "heart_rate": [],
-    "blood_pressure": [],
-    "glucose_level": []
-}
-
 ### --- GRPC: Ritmo Cardiaco --- ###
 class HeartRateSensorServicer(sensor_pb2_grpc.HeartRateSensorServicer):
     def SendHeartRate(self, request, context):
         print(f"[gRPC] Ritmo cardíaco recibido: {request.heart_rate} {request.unit} de {request.sensor_id} a las {request.timestamp}", flush=True)
-        sensor_data["heart_rate"].append({
-            "sensor_id": request.sensor_id,
-            "heart_rate": request.heart_rate,
-            "unit": request.unit,
-        })
         MQTT_publish("heart_rate", request.heart_rate, "rpm/casa/piso_1/habitacion_2/heart_rate/sensor_1")
         return sensor_pb2.Acknowledgement(message="Ritmo cardíaco recibido correctamente.")
 
@@ -108,7 +96,6 @@ rest_app = Flask(__name__)
 def handle_blood_pressure():
     data = request.json
     print(f"[REST] Presión arterial recibida: {data}", flush=True)
-    sensor_data["blood_pressure"].append(data)
     MQTT_publish("blood_pressure", data, "rpm/hospital/piso_2/habitacion_23/blood_pressure/sensor_2")
     return jsonify({"status": "success", "message": "Presión arterial recibida"})
 
@@ -125,7 +112,6 @@ async def websocket_server(websocket):
     async for message in websocket:
         data = json.loads(message)
         print(f"[WebSocket] Recibido: Sensor {data['sensor_id']}, Nivel de glucosa recibido: {data}", flush=True)
-        sensor_data["glucose_level"].append(data['value'])
         MQTT_publish("glucose_level", data, "rpm/hospital/piso_2/habitacion_20/glucose_level/sensor_3")
 
 def serve_websocket():
