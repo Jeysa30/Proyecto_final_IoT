@@ -78,7 +78,13 @@ def MQTT_publish(sensor_type, data, topic):
 class HeartRateSensorServicer(sensor_pb2_grpc.HeartRateSensorServicer):
     def SendHeartRate(self, request, context):
         print(f"[gRPC] Ritmo cardíaco recibido: {request.heart_rate} {request.unit} de {request.sensor_id} a las {request.timestamp}", flush=True)
-        MQTT_publish("heart_rate", request.heart_rate, "rpm/casa/piso_1/habitacion_2/heart_rate/sensor_1")
+        data = {
+            "sensor_id": request.sensor_id,
+            "heart_rate": request.heart_rate,
+            "unit": request.unit,
+            "timestamp": request.timestamp
+        }
+        MQTT_publish("heart_rate", data, "rpm/casa/piso_1/habitacion_2/heart_rate/sensor_1")
         return sensor_pb2.Acknowledgement(message="Ritmo cardíaco recibido correctamente.")
 
 def serve_grpc():

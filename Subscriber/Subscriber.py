@@ -137,6 +137,7 @@ if __name__ == '__main__':
 
     # Suscripción al tópico MQTT
     topic = "rpm/hospital/piso_2/#"
+    #topic = "rpm/casa/#"
     print("Subscribing to topic '{}'...".format(topic))
     subscribe_future, packet_id = mqtt_connection.subscribe(
         topic=topic,
