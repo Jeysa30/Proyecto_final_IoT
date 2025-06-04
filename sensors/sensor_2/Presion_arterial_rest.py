@@ -2,16 +2,11 @@ import random
 import time
 from datetime import datetime
 import requests
-from flask import Flask, jsonify
-import threading
 
 # Configuración del sensor
 SENSOR_ID = "bp_sensor_2"
-GATEWAY_URL = "http://iot-gateway:5000"  # Asumimos que el gateway tendrá un endpoint REST
+GATEWAY_URL = "http://iot-gateway:5000"  # Conexión con el endpoint REST del gateway
 GATEWAY_HEALTH_URL = f"{GATEWAY_URL}/health"
-LOCAL_PORT = 8080  # Puerto para la API local del sensor
-
-app = Flask(__name__)
 
 def generate_blood_pressure():
     """Genera datos simulados de presión arterial"""
@@ -50,19 +45,7 @@ def send_to_gateway():
             print(f"[Sensor] Error al enviar datos al gateway: {e}. Esperando reconexión...", flush=True)
             wait_for_gateway()
 
-        time.sleep(4)
-
-@app.route('/health', methods=['GET'])
-def health_check():
-    return jsonify({"status": "healthy"})
-
-@app.route('/data', methods=['GET'])
-def get_current_data():
-    return jsonify(generate_blood_pressure())
+        time.sleep(4) # Envía cada 4 segundos al gateway
 
 if __name__ == '__main__':
-    # Iniciar el hilo para enviar datos al gateway
-    threading.Thread(target=send_to_gateway, daemon=True).start()
-    
-    # Iniciar el servidor Flask
-    app.run(host='0.0.0.0', port=LOCAL_PORT)
+    send_to_gateway()
